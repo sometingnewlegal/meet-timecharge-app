@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 function defaultDateTimeLocal() {
   // <input type="datetime-local"> 用に "YYYY-MM-DDTHH:mm" 形式（ローカル時刻）を作る
   const d = new Date(Date.now() + 5 * 60 * 1000); // 少し先の時刻を初期値にしておく
+  d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0); // 15分刻みに切り上げ
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
@@ -34,7 +35,7 @@ export default async function StartPage() {
         </label>
         <label>
           予定日時
-          <input type="datetime-local" name="scheduledAt" required defaultValue={defaultDateTimeLocal()} />
+          <input type="datetime-local" name="scheduledAt" step="900" required defaultValue={defaultDateTimeLocal()} />
         </label>
         <label>
           単価テンプレート
