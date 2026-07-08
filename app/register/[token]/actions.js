@@ -19,7 +19,7 @@ export async function chooseCandidateAction(formData) {
   const client = await getClientByToken(token);
   if (!client?.pendingRequest) throw new Error("この予約リクエストは無効です");
 
-  const { rateTemplateId, durationMinutes } = client.pendingRequest;
+  const { rate, durationMinutes } = client.pendingRequest;
   const endIso = new Date(new Date(chosenIso).getTime() + durationMinutes * 60 * 1000).toISOString();
 
   let meetingCode = null;
@@ -42,7 +42,7 @@ export async function chooseCandidateAction(formData) {
 
   await createBooking({
     clientId: client.id,
-    rateTemplateId,
+    rate,
     scheduledAt: chosenIso,
     meetingCode,
     meetingUri,

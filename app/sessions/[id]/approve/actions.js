@@ -1,5 +1,5 @@
 "use server";
-import { getSession, getRateTemplates, updateSession, getClient } from "@/lib/store";
+import { getSession, updateSession, getClient } from "@/lib/store";
 import { calcFee } from "@/lib/feeCalc";
 import { getTranscriptTiming } from "@/lib/googleMeet";
 import { stripe } from "@/lib/stripe";
@@ -105,9 +105,8 @@ export async function finalizeApprovalAction(formData) {
   const sessionId = formData.get("sessionId");
   const deductionMinutes = Number(formData.get("deductionMinutes") || 0);
   const session = await getSession(sessionId);
-  const template = (await getRateTemplates()).find((t) => t.id === session.rateTemplateId);
-  const billableMinutes = Math.max(0, (session.inRoomMinutes || 0) - deductionMinutes);
-  const fee = calcFee(billableMinutes, template);
+  const billableMinutes = Math.max(0, (session.inRoomMinutes || 0) - deductionMinutes - (session.rate.freeMinutes || 0));
+  const fee = calcFee(billableMinutes, session.rate);
   const client = await getClient(session.clientId);
 
   const paymentResult = await chargeClient(client, fee, billableMinutes);

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getSession, getClients, getRateTemplates } from "@/lib/store";
+import { getSession, getClients } from "@/lib/store";
 import { listRecentConferences, getConferenceForMeetingCode } from "@/lib/googleMeet";
 import { calcFee } from "@/lib/feeCalc";
 import {
@@ -24,7 +24,7 @@ export default async function ApprovePage({ params }) {
   const session = await getSession(id);
   const client = (await getClients()).find((c) => c.id === session?.clientId);
   const clientLabel = client?.name || client?.email || "(不明)";
-  const template = (await getRateTemplates()).find((t) => t.id === session?.rateTemplateId);
+  const rate = session?.rate;
 
   if (!session) {
     return (
@@ -72,13 +72,17 @@ export default async function ApprovePage({ params }) {
 
   // ステップ2: 会議・参加者を選択済み → 控除入力して確定
   if (session.conferenceRecordName) {
-    const preview = calcFee(session.inRoomMinutes, template);
+    const previewMinutes = Math.max(0, (session.inRoomMinutes || 0) - (rate.freeMinutes || 0));
+    const preview = calcFee(previewMinutes, rate);
     return (
       <main>
         <h1>金額の確認</h1>
         <div className="card">
           <p>相談者: {clientLabel} 様</p>
-          <p>単価: {template.name}</p>
+          <p>
+            単価: {rate.unitMinutes}分あたり{rate.pricePerUnit.toLocaleString()}円（税別）
+            {rate.freeMinutes > 0 && `／最初の${rate.freeMinutes}分は無料`}
+          </p>
           <p>在室時間: {session.inRoomMinutes}分（{session.participantName}）</p>
         </div>
 
@@ -105,7 +109,7 @@ export default async function ApprovePage({ params }) {
           </label>
           <p className="muted">
             参考: 控除0分の場合 → {preview.blocks}ブロック / 合計 {preview.total.toLocaleString()}円
-            （控除を入力すると、確定時にその分を引いて再計算されます）
+            （控除を入力すると、確定時にその分を引いて再計算されます{rate.freeMinutes > 0 && `。最初の${rate.freeMinutes}分の無料分は既に引いた金額です`}）
           </p>
           <button type="submit">この内容で確定する</button>
         </form>

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { getRateTemplates } from "@/lib/store";
 import { getBusyBlocks } from "@/lib/googleMeet";
 import { todayJstDateStr, mondayOf, addDays } from "@/lib/weekDates";
 import { createScheduleRequestAction } from "./actions";
@@ -8,7 +7,6 @@ import WeekPicker from "./WeekPicker";
 export const dynamic = "force-dynamic";
 
 export default async function StartPage({ searchParams }) {
-  const templates = await getRateTemplates();
   const { week } = await searchParams;
   const monday = mondayOf(week && /^\d{4}-\d{2}-\d{2}$/.test(week) ? week : todayJstDateStr());
   const friday = addDays(monday, 4);
@@ -50,7 +48,6 @@ export default async function StartPage({ searchParams }) {
       <WeekPicker
         monday={monday}
         busy={busy}
-        templates={templates}
         action={createScheduleRequestAction}
       />
     </main>
