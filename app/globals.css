@@ -80,6 +80,11 @@ button {
   cursor: pointer;
 }
 
+button:disabled:not(.week-cell) {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 button.secondary {
   background: transparent;
   color: var(--accent);
@@ -143,6 +148,7 @@ td, th {
   min-height: 22px;
   cursor: pointer;
   background: transparent;
+  color: var(--foreground);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -155,18 +161,14 @@ td, th {
 }
 
 .week-cell.busy {
-  background: repeating-linear-gradient(
-    45deg,
-    color-mix(in srgb, var(--foreground) 12%, transparent),
-    color-mix(in srgb, var(--foreground) 12%, transparent) 4px,
-    transparent 4px,
-    transparent 8px
-  );
+  background: var(--border);
+  color: var(--foreground);
   cursor: not-allowed;
 }
 
 .week-cell.past {
   background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  color: var(--foreground);
   cursor: not-allowed;
 }
 

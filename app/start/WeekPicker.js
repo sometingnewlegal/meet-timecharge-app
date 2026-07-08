@@ -30,6 +30,13 @@ function formatHM(hour, minute) {
 export default function WeekPicker({ monday, busy, action }) {
   const [durationMinutes, setDurationMinutes] = useState(30);
   const [selected, setSelected] = useState([]); // ISO文字列の配列（選んだ順）
+  const [formValid, setFormValid] = useState(false); // 候補以外の必須項目が揃っているか
+
+  function handleFormChange(e) {
+    setFormValid(e.currentTarget.checkValidity());
+  }
+
+  const canSubmit = formValid && selected.length > 0;
 
   const slots = useMemo(() => buildSlots(durationMinutes), [durationMinutes]);
   const days = useMemo(
@@ -66,7 +73,7 @@ export default function WeekPicker({ monday, busy, action }) {
   }
 
   return (
-    <form action={action} className="card">
+    <form action={action} className="card" onChange={handleFormChange} onInput={handleFormChange}>
       <label>
         相談時間
         <select name="durationMinutes" required value={durationMinutes} onChange={handleDurationChange}>
@@ -142,10 +149,6 @@ export default function WeekPicker({ monday, busy, action }) {
         <input type="text" name="title" required placeholder="例: 山田様 タイムチャージ相談" />
       </label>
       <label>
-        相談者のメールアドレス
-        <input type="email" name="email" required placeholder="例: yamada@example.com" />
-      </label>
-      <label>
         単価（◯分あたり◯円）
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <select name="unitMinutes" required defaultValue="15" style={{ width: "auto" }}>
@@ -172,7 +175,7 @@ export default function WeekPicker({ monday, busy, action }) {
         最初の30分は無料にする（実際の相談時間から30分を引いて課金します）
       </label>
 
-      <button type="submit" disabled={selected.length === 0}>
+      <button type="submit" disabled={!canSubmit}>
         この内容で候補を送る（{selected.length}件選択中）
       </button>
     </form>
