@@ -1,13 +1,55 @@
 "use server";
-import { getClientByToken, updateClient } from "@/lib/store";
+import { getClientByToken, updateClient, createBooking } from "@/lib/store";
+import { createScheduledMeeting } from "@/lib/googleMeet";
 import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 
 async function baseUrl() {
   const h = await headers();
   const host = h.get("host");
   const protocol = host?.startsWith("localhost") ? "http" : "https";
   return `${protocol}://${host}`;
+}
+
+// 相談者が候補日時から1つ選ぶ → その日時でMeetの予定を作り、予約（セッション）を確定する
+export async function chooseCandidateAction(formData) {
+  const token = formData.get("token")?.toString();
+  const chosenIso = formData.get("chosenIso")?.toString();
+  const client = await getClientByToken(token);
+  if (!client?.pendingRequest) throw new Error("この予約リクエストは無効です");
+
+  const { rateTemplateId, durationMinutes } = client.pendingRequest;
+  const endIso = new Date(new Date(chosenIso).getTime() + durationMinutes * 60 * 1000).toISOString();
+
+  let meetingCode = null;
+  let meetingUri = null;
+  let calendarEventId = null;
+  try {
+    // attendeeEmail はあえて渡さない（Googleのカレンダー招待メールでMeetリンクが直接届くと、
+    // 「登録・カード登録を終えないとリンクが手に入らない」という設計の前提が崩れるため）
+    const meeting = await createScheduledMeeting({
+      summary: `タイムチャージ相談（${client.email}）`,
+      startIso: chosenIso,
+      endIso,
+    });
+    meetingCode = meeting.meetingCode;
+    meetingUri = meeting.meetingUri;
+    calendarEventId = meeting.calendarEventId;
+  } catch {
+    // カレンダー連携に失敗した場合は、いつも通り手動でMeetを用意する運用にフォールバックする
+  }
+
+  await createBooking({
+    clientId: client.id,
+    rateTemplateId,
+    scheduledAt: chosenIso,
+    meetingCode,
+    meetingUri,
+    calendarEventId,
+  });
+  await updateClient(client.id, { pendingRequest: null });
+  revalidatePath(`/register/${token}`);
 }
 
 // 相談者本人が氏名・会社名・メールを入力 → Stripeのカード登録画面へのURLを返す

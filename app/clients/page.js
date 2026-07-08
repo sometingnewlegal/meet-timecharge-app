@@ -50,7 +50,7 @@ export default async function ClientsPage() {
           {clients.map((c) => (
             <tr key={c.id}>
               <td>
-                {c.status === "pending" ? "（招待中・未入力）" : c.name}
+                {c.pendingRequest ? "（日程調整待ち）" : c.status === "pending" ? "（招待中・未入力）" : c.name}
                 {c.companyName ? ` / ${c.companyName}` : ""}
               </td>
               <td className="muted">{c.email || "-"}</td>

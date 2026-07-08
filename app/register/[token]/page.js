@@ -1,6 +1,7 @@
 import { getClientByToken } from "@/lib/store";
 import RegisterForm from "./RegisterForm";
 import UpcomingMeetings from "./UpcomingMeetings";
+import { chooseCandidateAction } from "./actions";
 
 export default async function RegisterPage({ params }) {
   const { token } = await params;
@@ -10,6 +11,23 @@ export default async function RegisterPage({ params }) {
     return (
       <main>
         <p>このリンクは無効です。送付元にご確認ください。</p>
+      </main>
+    );
+  }
+
+  // 候補日時がまだ選ばれていなければ、カード登録済みかどうかに関わらず先に日程を選んでもらう
+  if (client.pendingRequest) {
+    return (
+      <main>
+        <h1>ご都合の良い日時をお選びください</h1>
+        <p className="muted">相談の長さ: {client.pendingRequest.durationMinutes}分</p>
+        {client.pendingRequest.candidates.map((iso) => (
+          <form action={chooseCandidateAction} key={iso} className="card">
+            <input type="hidden" name="token" value={token} />
+            <input type="hidden" name="chosenIso" value={iso} />
+            <button type="submit">{new Date(iso).toLocaleString("ja-JP")}</button>
+          </form>
+        ))}
       </main>
     );
   }

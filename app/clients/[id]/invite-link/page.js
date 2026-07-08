@@ -28,13 +28,17 @@ export default async function InviteLinkPage({ params }) {
       <h1>招待リンク</h1>
       <p className="muted">
         このリンクをメールやチャットで相談者ご本人に送ってください。
-        氏名・会社名・メールアドレスの入力とカード登録を、相手側の画面で行っていただけます。
+        {client.pendingRequest
+          ? "まず候補日時から都合の良いものを選んでもらい、続けて氏名・会社名・メールアドレスの入力とカード登録を、相手側の画面で行っていただけます。"
+          : "氏名・会社名・メールアドレスの入力とカード登録を、相手側の画面で行っていただけます。"}
       </p>
       <div className="card">
         <input type="text" readOnly value={url} />
       </div>
       <p className="muted">
-        {client.status === "pending"
+        {client.pendingRequest
+          ? "まだ日程が選ばれていません。"
+          : client.status === "pending"
           ? "まだ相手が入力していません。"
           : `${client.name} 様は既に登録済みです。カードの再登録にもこのリンクを使えます。`}
       </p>
