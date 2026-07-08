@@ -1,4 +1,5 @@
 import { getClientByToken } from "@/lib/store";
+import { formatJstRange } from "@/lib/weekDates";
 import RegisterForm from "./RegisterForm";
 import UpcomingMeetings from "./UpcomingMeetings";
 import { chooseCandidateAction } from "./actions";
@@ -25,7 +26,9 @@ export default async function RegisterPage({ params }) {
           <form action={chooseCandidateAction} key={iso} className="card">
             <input type="hidden" name="token" value={token} />
             <input type="hidden" name="chosenIso" value={iso} />
-            <button type="submit">{new Date(iso).toLocaleString("ja-JP")}</button>
+            <button type="submit">
+              {formatJstRange(iso, client.pendingRequest.durationMinutes)}
+            </button>
           </form>
         ))}
       </main>

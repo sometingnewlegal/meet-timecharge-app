@@ -15,9 +15,16 @@ function buildSlots(stepMinutes) {
   return slots;
 }
 
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
 function isoOf(dateStr, hour, minute) {
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${dateStr}T${pad(hour)}:${pad(minute)}:00+09:00`;
+  return `${dateStr}T${pad2(hour)}:${pad2(minute)}:00+09:00`;
+}
+
+function formatHM(hour, minute) {
+  return `${pad2(hour)}:${pad2(minute)}`;
 }
 
 export default function WeekPicker({ monday, busy, action }) {
@@ -81,7 +88,8 @@ export default function WeekPicker({ monday, busy, action }) {
           const [, m, d] = dateStr.split("-");
           return (
             <div className="week-grid-header" key={dateStr}>
-              {DAY_LABELS[i]} {Number(m)}/{Number(d)}
+              <div>{Number(m)}/{Number(d)}</div>
+              <div>{DAY_LABELS[i]}</div>
             </div>
           );
         })}
@@ -89,7 +97,7 @@ export default function WeekPicker({ monday, busy, action }) {
         {slots.map(({ hour, minute }) => (
           <Fragment key={`row-${hour}-${minute}`}>
             <div className="week-time-label">
-              {`${hour}:${String(minute).padStart(2, "0")}`}
+              {formatHM(hour, minute)}
             </div>
             {days.map((dateStr) => {
               const iso = isoOf(dateStr, hour, minute);
@@ -101,6 +109,8 @@ export default function WeekPicker({ monday, busy, action }) {
               if (busySlot) classes.push("busy");
               if (past) classes.push("past");
               if (idx !== -1) classes.push("selected");
+              const endTotal = hour * 60 + minute + durationMinutes;
+              const rangeLabel = `${formatHM(hour, minute)}~${formatHM(Math.floor(endTotal / 60) % 24, endTotal % 60)}`;
               return (
                 <button
                   type="button"
@@ -108,9 +118,9 @@ export default function WeekPicker({ monday, busy, action }) {
                   className={classes.join(" ")}
                   disabled={disabled}
                   onClick={() => toggle(iso)}
-                  title={new Date(iso).toLocaleString("ja-JP")}
+                  title={rangeLabel}
                 >
-                  {idx !== -1 ? idx + 1 : ""}
+                  {idx !== -1 ? rangeLabel : ""}
                 </button>
               );
             })}
