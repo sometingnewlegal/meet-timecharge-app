@@ -7,11 +7,12 @@ export async function createBookingAction(formData) {
   const email = formData.get("email")?.toString().trim();
   const rateTemplateId = formData.get("rateTemplateId");
   const scheduledAtLocal = formData.get("scheduledAt")?.toString(); // datetime-local (ローカル時刻、TZ無し)
+  const durationMinutes = Number(formData.get("durationMinutes")) || 30;
   if (!email || !rateTemplateId || !scheduledAtLocal) return;
 
   const client = await findOrCreateClientByEmail(email);
   const scheduledAt = new Date(scheduledAtLocal).toISOString();
-  const endIso = new Date(new Date(scheduledAtLocal).getTime() + 30 * 60 * 1000).toISOString();
+  const endIso = new Date(new Date(scheduledAtLocal).getTime() + durationMinutes * 60 * 1000).toISOString();
 
   let meetingCode = null;
   let meetingUri = null;

@@ -34,8 +34,19 @@ export default async function StartPage() {
           <input type="email" name="email" required placeholder="例: yamada@example.com" />
         </label>
         <label>
-          予定日時
+          開始日時
           <input type="datetime-local" name="scheduledAt" step="900" required defaultValue={defaultDateTimeLocal()} />
+        </label>
+        <label>
+          相談の長さ
+          <select name="durationMinutes" required defaultValue="30">
+            <option value="15">15分</option>
+            <option value="30">30分</option>
+            <option value="45">45分</option>
+            <option value="60">60分</option>
+            <option value="90">90分</option>
+            <option value="120">120分</option>
+          </select>
         </label>
         <label>
           単価テンプレート
