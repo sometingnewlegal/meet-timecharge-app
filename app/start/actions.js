@@ -3,6 +3,7 @@ import { createScheduleRequest } from "@/lib/store";
 import { redirect } from "next/navigation";
 
 export async function createScheduleRequestAction(formData) {
+  const title = formData.get("title")?.toString().trim();
   const email = formData.get("email")?.toString().trim();
   const durationMinutes = Number(formData.get("durationMinutes")) || 30;
   const unitMinutes = Number(formData.get("unitMinutes")) || 15;
@@ -12,7 +13,7 @@ export async function createScheduleRequestAction(formData) {
     .map((i) => formData.get(`candidate${i}`)?.toString())
     .filter(Boolean)
     .map((local) => new Date(local).toISOString());
-  if (!email || !Number.isFinite(pricePerUnit) || candidates.length === 0) return;
+  if (!title || !email || !Number.isFinite(pricePerUnit) || candidates.length === 0) return;
 
   const rate = {
     unitMinutes,
@@ -21,6 +22,6 @@ export async function createScheduleRequestAction(formData) {
     freeMinutes: freeFirst30 ? 30 : 0,
   };
 
-  const client = await createScheduleRequest({ email, rate, durationMinutes, candidates });
+  const client = await createScheduleRequest({ title, email, rate, durationMinutes, candidates });
   redirect(`/clients/${client.id}/invite-link`);
 }

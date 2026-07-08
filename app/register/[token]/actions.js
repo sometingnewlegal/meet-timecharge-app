@@ -19,7 +19,7 @@ export async function chooseCandidateAction(formData) {
   const client = await getClientByToken(token);
   if (!client?.pendingRequest) throw new Error("この予約リクエストは無効です");
 
-  const { rate, durationMinutes } = client.pendingRequest;
+  const { title, rate, durationMinutes } = client.pendingRequest;
   const endIso = new Date(new Date(chosenIso).getTime() + durationMinutes * 60 * 1000).toISOString();
 
   let meetingCode = null;
@@ -29,7 +29,7 @@ export async function chooseCandidateAction(formData) {
     // attendeeEmail はあえて渡さない（Googleのカレンダー招待メールでMeetリンクが直接届くと、
     // 「登録・カード登録を終えないとリンクが手に入らない」という設計の前提が崩れるため）
     const meeting = await createScheduledMeeting({
-      summary: `タイムチャージ相談（${client.email}）`,
+      summary: title,
       startIso: chosenIso,
       endIso,
     });
@@ -42,6 +42,7 @@ export async function chooseCandidateAction(formData) {
 
   await createBooking({
     clientId: client.id,
+    title,
     rate,
     scheduledAt: chosenIso,
     meetingCode,

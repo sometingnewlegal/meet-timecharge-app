@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getBusyBlocks } from "@/lib/googleMeet";
+import { getBusyEvents } from "@/lib/googleMeet";
 import { todayJstDateStr, mondayOf, addDays } from "@/lib/weekDates";
 import { createScheduleRequestAction } from "./actions";
 import WeekPicker from "./WeekPicker";
@@ -16,7 +16,7 @@ export default async function StartPage({ searchParams }) {
   let busy = [];
   let fetchError = null;
   try {
-    busy = await getBusyBlocks(`${monday}T00:00:00+09:00`, `${friday}T23:59:59+09:00`);
+    busy = await getBusyEvents(`${monday}T00:00:00+09:00`, `${friday}T23:59:59+09:00`);
   } catch (err) {
     fetchError = err?.message || String(err);
   }

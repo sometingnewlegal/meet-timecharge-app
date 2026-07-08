@@ -143,6 +143,11 @@ td, th {
   min-height: 22px;
   cursor: pointer;
   background: transparent;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.68rem;
+  padding: 0 2px;
 }
 
 .week-cell:hover {

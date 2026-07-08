@@ -37,15 +37,19 @@ export default function WeekPicker({ monday, busy, action }) {
     [monday]
   );
   const busyRanges = useMemo(
-    () => (busy || []).map((b) => ({ start: new Date(b.start).getTime(), end: new Date(b.end).getTime() })),
+    () => (busy || []).map((b) => ({
+      start: new Date(b.start).getTime(),
+      end: new Date(b.end).getTime(),
+      summary: b.summary,
+    })),
     [busy]
   );
   const now = Date.now();
 
-  function isBusy(iso) {
+  function findBusyEvent(iso) {
     const start = new Date(iso).getTime();
     const end = start + durationMinutes * 60 * 1000;
-    return busyRanges.some((b) => start < b.end && end > b.start);
+    return busyRanges.find((b) => start < b.end && end > b.start) || null;
   }
 
   function toggle(iso) {
@@ -76,7 +80,7 @@ export default function WeekPicker({ monday, busy, action }) {
       </label>
 
       <p className="muted">
-        空いている枠をクリックして候補にしてください（最大{MAX_CANDIDATES}個）。網掛けは既存の予定がある時間帯です。
+        空いている枠をクリックして候補にしてください（最大{MAX_CANDIDATES}個）。網掛けは既存の予定がある時間帯で、予定名も表示しています。
       </p>
 
       <div
@@ -102,15 +106,16 @@ export default function WeekPicker({ monday, busy, action }) {
             {days.map((dateStr) => {
               const iso = isoOf(dateStr, hour, minute);
               const past = new Date(iso).getTime() < now;
-              const busySlot = !past && isBusy(iso);
+              const busyEvent = !past ? findBusyEvent(iso) : null;
               const idx = selected.indexOf(iso);
-              const disabled = past || busySlot;
+              const disabled = past || !!busyEvent;
               const classes = ["week-cell"];
-              if (busySlot) classes.push("busy");
+              if (busyEvent) classes.push("busy");
               if (past) classes.push("past");
               if (idx !== -1) classes.push("selected");
               const endTotal = hour * 60 + minute + durationMinutes;
               const rangeLabel = `${formatHM(hour, minute)}~${formatHM(Math.floor(endTotal / 60) % 24, endTotal % 60)}`;
+              const content = idx !== -1 ? rangeLabel : busyEvent ? busyEvent.summary : "";
               return (
                 <button
                   type="button"
@@ -118,9 +123,9 @@ export default function WeekPicker({ monday, busy, action }) {
                   className={classes.join(" ")}
                   disabled={disabled}
                   onClick={() => toggle(iso)}
-                  title={rangeLabel}
+                  title={busyEvent ? `${rangeLabel} ${busyEvent.summary}` : rangeLabel}
                 >
-                  {idx !== -1 ? rangeLabel : ""}
+                  {content}
                 </button>
               );
             })}
@@ -132,6 +137,10 @@ export default function WeekPicker({ monday, busy, action }) {
         <input key={iso} type="hidden" name={`candidate${i + 1}`} value={iso} />
       ))}
 
+      <label>
+        予定の名称（カレンダーに表示される予定名になります）
+        <input type="text" name="title" required placeholder="例: 山田様 タイムチャージ相談" />
+      </label>
       <label>
         相談者のメールアドレス
         <input type="email" name="email" required placeholder="例: yamada@example.com" />
