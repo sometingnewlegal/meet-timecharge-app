@@ -6,7 +6,7 @@ export async function createScheduleRequestAction(formData) {
   const email = formData.get("email")?.toString().trim();
   const rateTemplateId = formData.get("rateTemplateId");
   const durationMinutes = Number(formData.get("durationMinutes")) || 30;
-  const candidates = [1, 2, 3]
+  const candidates = [1, 2, 3, 4, 5]
     .map((i) => formData.get(`candidate${i}`)?.toString())
     .filter(Boolean)
     .map((local) => new Date(local).toISOString());
