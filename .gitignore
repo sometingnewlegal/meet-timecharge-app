@@ -32,9 +32,15 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
+
+# 個人データ・秘密情報
+/data/db.json
+/credentials.json
+/token.json
 
 # typescript
 *.tsbuildinfo
