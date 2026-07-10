@@ -77,10 +77,15 @@ export default async function Home() {
 
   return (
     <main>
-      <h1>タイムチャージ相談アプリ</h1>
+      <div className="page-header">
+        <h1>タイムチャージ相談アプリ</h1>
+        <Link href="/start" className="new-session-button">
+          予約の新規作成
+        </Link>
+      </div>
 
       {unbilled.length > 0 && (
-        <section>
+        <section className="phase-section">
           <h2 className="urgent-heading">
             <span className="urgent-icon" aria-hidden="true">!</span>
             未請求（{unbilled.length}件）
@@ -115,15 +120,10 @@ export default async function Home() {
         </section>
       )}
 
-      <Link href="/start" className="new-session-button">
-        予約の新規作成
-      </Link>
-
-      <section className="phase-section">
-        <h2>日程選択待ち（{waitingForDate.length}件）</h2>
-        {waitingForDate.length === 0 && <p className="muted">日程選択待ちの相手はいません。</p>}
-        {waitingForDate.length > 0 && (
-          <div className="card-group tint-waiting">
+      {waitingForDate.length > 0 && (
+        <section className="phase-section">
+          <h2>日程選択待ち（{waitingForDate.length}件）</h2>
+          <div className="card-group">
             {waitingForDate.map((c) => (
               <Link href={`/clients/${c.id}/invite-link`} className="card-group-item phase-waiting" key={c.id}>
                 <div className="session-details">
@@ -137,14 +137,13 @@ export default async function Home() {
               </Link>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
-      <section className="phase-section">
-        <h2>実施予定の相談（{upcoming.length}件）</h2>
-        {upcoming.length === 0 && <p className="muted">実施予定の相談はありません。</p>}
-        {upcoming.length > 0 && (
-          <div className="card-group tint-upcoming">
+      {upcoming.length > 0 && (
+        <section className="phase-section">
+          <h2>実施予定の相談（{upcoming.length}件）</h2>
+          <div className="card-group">
             {upcoming.map((s) => (
               <Link href={`/sessions/${s.id}`} className="card-group-item phase-upcoming" key={s.id}>
                 <div className="session-highlight">
@@ -160,14 +159,13 @@ export default async function Home() {
               </Link>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
-      <section className="phase-section">
-        <h2>要確認（{needsReview.length}件）</h2>
-        {needsReview.length === 0 && <p className="muted">確認が必要な相談はありません。</p>}
-        {needsReview.length > 0 && (
-          <div className="card-group tint-info">
+      {needsReview.length > 0 && (
+        <section className="phase-section">
+          <h2>要確認（{needsReview.length}件）</h2>
+          <div className="card-group">
             {needsReview.map((s) => (
               <Link href={`/sessions/${s.id}/approve`} className="card-group-item phase-info" key={s.id}>
                 <div className="session-highlight">
@@ -184,50 +182,56 @@ export default async function Home() {
               </Link>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
-      <details className="phase-section" style={{ paddingTop: 20 }}>
-        <summary>終了済みの相談を表示（{endedCount}件）</summary>
+      {endedCount > 0 && (
+        <details>
+          <summary>終了済みの相談を表示（{endedCount}件）</summary>
 
-        <h2>決済待ち（{trulyPending.length}件）</h2>
-        {trulyPending.length === 0 && <p className="muted">決済待ちの相談はありません。</p>}
-        {trulyPending.length > 0 && (
-          <div className="card-group tint-waiting">
-            {trulyPending.map((s) => (
-              <Link href={`/sessions/${s.id}/approve`} className="card-group-item phase-waiting" key={s.id}>
-                <div className="session-highlight">
-                  <span className="session-highlight-value">{s.fee?.total?.toLocaleString()}円</span>
-                  <span className="session-highlight-time">{PAYMENT_PENDING_LABEL[s.paymentStatus] ?? "処理中"}</span>
-                </div>
-                <div className="session-details">
-                  <div className="session-client">{clientLabel(clientById(s.clientId))} 様</div>
-                  <p className="muted session-meta">
-                    {sessionDateLabel(s.scheduledAt)} {sessionTimeRange(s)}実施 ・ {rateLabel(s.rate)}
-                  </p>
-                </div>
-                <ChevronRight className="card-group-chevron" size={20} />
-              </Link>
-            ))}
-          </div>
-        )}
+          {trulyPending.length > 0 && (
+            <section className="phase-section" style={{ marginTop: 16 }}>
+              <h2>決済待ち（{trulyPending.length}件）</h2>
+              <div className="card-group">
+                {trulyPending.map((s) => (
+                  <Link href={`/sessions/${s.id}/approve`} className="card-group-item phase-waiting" key={s.id}>
+                    <div className="session-highlight">
+                      <span className="session-highlight-value">{s.fee?.total?.toLocaleString()}円</span>
+                      <span className="session-highlight-time">{PAYMENT_PENDING_LABEL[s.paymentStatus] ?? "処理中"}</span>
+                    </div>
+                    <div className="session-details">
+                      <div className="session-client">{clientLabel(clientById(s.clientId))} 様</div>
+                      <p className="muted session-meta">
+                        {sessionDateLabel(s.scheduledAt)} {sessionTimeRange(s)}実施 ・ {rateLabel(s.rate)}
+                      </p>
+                    </div>
+                    <ChevronRight className="card-group-chevron" size={20} />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
-        <h2>決済済み</h2>
-        {paidToShow.length === 0 && <p className="muted">まだありません。</p>}
-        <table>
-          <tbody>
-            {paidToShow.map((s) => (
-              <tr key={s.id}>
-                <td>{clientLabel(clientById(s.clientId))} 様</td>
-                <td>{s.billableMinutes}分</td>
-                <td className="amount-cell">{s.fee?.total?.toLocaleString()}円</td>
-                <td className="muted">{s.paymentStatus ?? "-"}</td>
-                <td className="muted">{formatJstDate(s.approvedAt)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </details>
+          {paidToShow.length > 0 && (
+            <section className="phase-section">
+              <h2>決済済み</h2>
+              <table>
+                <tbody>
+                  {paidToShow.map((s) => (
+                    <tr key={s.id}>
+                      <td>{clientLabel(clientById(s.clientId))} 様</td>
+                      <td>{s.billableMinutes}分</td>
+                      <td className="amount-cell">{s.fee?.total?.toLocaleString()}円</td>
+                      <td className="muted">{s.paymentStatus ?? "-"}</td>
+                      <td className="muted">{formatJstDate(s.approvedAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
+        </details>
+      )}
     </main>
   );
 }

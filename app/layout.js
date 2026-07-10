@@ -1,5 +1,8 @@
+import { Inter } from "next/font/google";
 import "./globals.css";
 import SettingsMenu from "./SettingsMenu";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata = {
   title: "タイムチャージ相談アプリ",
@@ -9,7 +12,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="ja">
-      <body>
+      <body className={inter.variable}>
         <SettingsMenu />
         {children}
       </body>

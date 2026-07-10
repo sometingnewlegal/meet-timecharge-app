@@ -5,17 +5,36 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #F0F3EE;
-  --foreground: #222B20;
+  --background: #F0F5F9;
+  --foreground: #1A3D63;
   --border: color-mix(in srgb, var(--foreground) 14%, var(--background));
   --primary: #7A9870;
   --primary-foreground: #222B20;
   --link: #4C6B44;
   --phase-waiting: #b8860b;
-  --card: #ffffff;
-  --shadow-card: 0 4px 14px rgba(34, 43, 32, 0.08), 0 1px 3px rgba(34, 43, 32, 0.06);
+  /* グラスモーフィズム（作り直し・指定値そのまま）。--glass-base/--glass-alphaは
+     未請求バナーの色付きガラス（二段階color-mix）でのみ使う土台 */
+  --glass-base: white;
+  --glass-alpha: 75%;
+  --card: rgba(255, 255, 255, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --shadow-card: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
   --card-foreground: var(--foreground);
-  --page-gradient: linear-gradient(135deg, #E6EEDF 0%, #F0F3EE 45%, #F6F0E6 100%);
+  /* カテゴリー全体を包む親コンテナ（.phase-section）用のガラス。
+     境界線が白同士で馴染みすぎて見えなかったため、輪郭用の影も別途持たせる */
+  --category-bg: rgba(255, 255, 255, 0.38);
+  --category-border: rgba(255, 255, 255, 0.75);
+  --shadow-category: 0 8px 32px rgba(31, 38, 135, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  /* グラデーションメッシュ背景（White & Bright Gradient）。白いキャンバスの四隅に明るい色のブロブを置く */
+  --accent-cyan: #A1EAFB;
+  --accent-purple: #C86AEE;
+  --accent-mint: #8DF4C9;
+  --accent-lilac: #E8A2F2;
+  --page-gradient:
+    radial-gradient(at 8% 8%, color-mix(in srgb, var(--accent-cyan) 26%, transparent) 0px, transparent 55%),
+    radial-gradient(at 92% 6%, color-mix(in srgb, var(--accent-purple) 18%, transparent) 0px, transparent 55%),
+    radial-gradient(at 6% 92%, color-mix(in srgb, var(--accent-mint) 24%, transparent) 0px, transparent 55%),
+    radial-gradient(at 94% 94%, color-mix(in srgb, var(--accent-lilac) 20%, transparent) 0px, transparent 55%);
   --cta-bg: #1F2A1C;
   --cta-bg-hover: #12190F;
   --cta-foreground: #F5F1E8;
@@ -59,10 +78,21 @@
     --primary-foreground: #1A2118;
     --link: #8AAB80;
     --phase-waiting: #d9a441;
-    --card: #2B362A;
-    --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.25);
+    --glass-base: #2B362A;
+    --glass-alpha: 75%;
+    --card: rgba(43, 54, 42, 0.3);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+    --category-bg: rgba(255, 255, 255, 0.1);
+    --category-border: rgba(255, 255, 255, 0.22);
+    --shadow-category: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     --card-foreground: var(--foreground);
-    --page-gradient: linear-gradient(135deg, #1E2A1C 0%, #222B20 50%, #26301F 100%);
+    --page-gradient:
+      radial-gradient(at 8% 8%, color-mix(in srgb, var(--accent-cyan) 30%, transparent) 0px, transparent 55%),
+      radial-gradient(at 92% 6%, color-mix(in srgb, var(--accent-purple) 28%, transparent) 0px, transparent 55%),
+      radial-gradient(at 6% 92%, color-mix(in srgb, var(--accent-mint) 26%, transparent) 0px, transparent 55%),
+      radial-gradient(at 94% 94%, color-mix(in srgb, var(--accent-lilac) 26%, transparent) 0px, transparent 55%),
+      linear-gradient(135deg, #1A1625 0%, #201A2E 50%, #14121F 100%);
     --cta-bg: #F0F3EE;
     --cta-bg-hover: #DDE4D3;
     --cta-foreground: #222B20;
@@ -96,7 +126,8 @@
 }
 
 body {
-  font-family: -apple-system, "Hiragino Kaku Gothic ProN", Meiryo, Arial, sans-serif;
+  /* 英数字はInter、日本語は既存のシステムフォントにフォールバック */
+  font-family: var(--font-inter), -apple-system, "Hiragino Kaku Gothic ProN", Meiryo, Arial, sans-serif;
   font-weight: 500;
   margin: 0;
   padding: 36px;
@@ -121,6 +152,23 @@ h1 {
   margin-bottom: 1.5rem;
 }
 
+/* タイトルと「予約の新規作成」を横並びにし、下のカード列を余計な行を挟まずに縦一列にする */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.page-header h1 {
+  margin-bottom: 0;
+}
+.page-header .new-session-button {
+  margin-bottom: 0;
+  flex: 0 0 auto;
+}
+
 h2 {
   font-size: 1.1rem;
   font-weight: 700;
@@ -130,11 +178,12 @@ h2 {
 .card {
   background: var(--card);
   color: var(--card-foreground);
-  border: none;
+  border: 1px solid var(--glass-border);
   border-radius: 16px;
   padding: 22px 24px;
   margin-bottom: 18px;
   box-shadow: var(--shadow-card);
+  backdrop-filter: blur(20px);
 }
 
 /* トップページの起点となる「予約の新規作成」— 一覧の相談カードとは別物とわかるよう独立したボタンにする */
@@ -153,41 +202,47 @@ h2 {
   background: var(--cta-bg-hover);
 }
 
-/* フェーズ（日程選択待ち/実施予定/決済待ち…）のセクション区切り。
-   グループが1件ずつだとカードだけでは境目が分からないので、見出しの上に罫線を引いて区切る */
+/* カテゴリー（「未請求」「日程選択待ち」等、見出し＋カード群のひとまとまり）を
+   優しく包む親コンテナ。カード本体(--card)より薄いガラスにして、入れ子感を出す */
 .phase-section {
-  border-top: 1.5px solid color-mix(in srgb, var(--foreground) 22%, var(--background));
-  margin-top: 28px;
+  background: var(--category-bg);
+  backdrop-filter: blur(16px);
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 32px;
+  border: 1px solid var(--category-border);
+  box-shadow: var(--shadow-category);
 }
 .phase-section > h2 {
-  margin-top: 1.2rem;
+  margin: 0 0 16px;
 }
 
-/* フェーズごとの相談一覧: 1グループ=1つの角丸カードにまとめ、中の行を罫線で区切る
-   （グループ同士の境目を分かりやすくするため。iOSのヘルスケアアプリの「グループ化リスト」を参考） */
+/* フェーズごとの相談一覧。各カードは「重なり合うガラス板」のように、それぞれが
+   独立した浮遊するガラスカードとして12px間隔で縦に並ぶ（最後のカードは間隔なし） */
 .card-group {
-  background: var(--card);
-  color: var(--card-foreground);
-  border-radius: 16px;
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
-  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
 }
 .card-group-item {
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 18px 20px;
-  border-bottom: 1px solid var(--border);
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
   border-left: 4px solid transparent;
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(20px);
   text-decoration: none;
   color: inherit;
+  margin-bottom: 12px;
 }
 .card-group-item:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 .card-group-item:hover {
-  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  background: color-mix(in srgb, var(--foreground) 8%, var(--card));
 }
 .card-group-item.phase-waiting { border-left-color: var(--phase-waiting); }
 .card-group-item.phase-upcoming { border-left-color: var(--primary); }
@@ -198,21 +253,10 @@ h2 {
   opacity: 0.35;
 }
 
-/* カード自体にもフェーズの色をのせる（参考画像のような塗りつぶしカードから着想）。
-   背景がクリーム系で薄いため、カードは背景よりはっきり見える濃さにする。
-   グループ内は全行が同じフェーズなので、行ではなくグループ全体を色分けする。
-   文字色は視認性のため黒系（--card-foreground）に統一し、背景と同系色の文字色は付けない
-   （コントラスト低下・人名に色を付けない配慮のため） */
-.card-group.tint-waiting { background: color-mix(in srgb, var(--phase-waiting) 24%, var(--card)); }
-.card-group.tint-upcoming { background: color-mix(in srgb, var(--primary) 26%, var(--card)); }
-.card-group.tint-info { background: color-mix(in srgb, var(--info) 22%, var(--card)); }
-
 /* 未請求バナー: 濃い赤の塗りつぶしではなく、控えめなピンク寄りの色分け＋
    左に赤いビックリマークアイコンで目立たせる方式にした（一覧が空でない時だけ画面冒頭に出る） */
-.card-group--urgent {
-  background: color-mix(in srgb, var(--urgent-icon-bg) 22%, var(--card));
-}
 .card-group--urgent .card-group-item {
+  background: color-mix(in srgb, color-mix(in srgb, var(--urgent-icon-bg) 22%, var(--glass-base)) var(--glass-alpha), transparent);
   border-left-color: var(--urgent-icon-bg);
 }
 .urgent-heading {
