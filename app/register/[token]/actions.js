@@ -2,15 +2,8 @@
 import { getClientByToken, updateClient, createBooking } from "@/lib/store";
 import { createScheduledMeeting } from "@/lib/googleMeet";
 import { stripe } from "@/lib/stripe";
-import { headers } from "next/headers";
+import { baseUrl } from "@/lib/baseUrl";
 import { revalidatePath } from "next/cache";
-
-async function baseUrl() {
-  const h = await headers();
-  const host = h.get("host");
-  const protocol = host?.startsWith("localhost") ? "http" : "https";
-  return `${protocol}://${host}`;
-}
 
 // 相談者が候補日時から1つ選ぶ → その日時でMeetの予定を作り、予約（セッション）を確定する
 export async function chooseCandidateAction(formData) {
@@ -44,6 +37,7 @@ export async function chooseCandidateAction(formData) {
     clientId: client.id,
     title,
     rate,
+    durationMinutes,
     scheduledAt: chosenIso,
     meetingCode,
     meetingUri,

@@ -1,4 +1,5 @@
 import { getSessionsByClient } from "@/lib/store";
+import { formatJstDateTime } from "@/lib/weekDates";
 
 // 登録・カード登録が完了した相談者にだけ見せる、予約済み相談のMeetリンク一覧。
 // ここが唯一Meetリンクが渡る場所（カレンダー招待メールでは送っていない）。
@@ -14,7 +15,7 @@ export default async function UpcomingMeetings({ clientId }) {
       <h2>ご相談の予定</h2>
       {sessions.map((s) => (
         <div className="card" key={s.id}>
-          <p>予定日時: {new Date(s.scheduledAt).toLocaleString("ja-JP")}</p>
+          <p>予定日時: {formatJstDateTime(s.scheduledAt)}</p>
           {s.meetingUri ? (
             <p>
               当日はこちらのリンクからご参加ください:

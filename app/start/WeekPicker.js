@@ -1,5 +1,5 @@
 "use client";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { addDays } from "@/lib/weekDates";
 
 const MAX_CANDIDATES = 5;
@@ -27,13 +27,25 @@ function formatHM(hour, minute) {
   return `${pad2(hour)}:${pad2(minute)}`;
 }
 
-export default function WeekPicker({ monday, busy, action }) {
+export default function WeekPicker({ monday, busy, rateTemplates = [], action }) {
   const [durationMinutes, setDurationMinutes] = useState(30);
   const [selected, setSelected] = useState([]); // ISO文字列の配列（選んだ順）
   const [formValid, setFormValid] = useState(false); // 候補以外の必須項目が揃っているか
+  const formRef = useRef(null);
+  const unitMinutesRef = useRef(null);
+  const pricePerUnitRef = useRef(null);
 
   function handleFormChange(e) {
     setFormValid(e.currentTarget.checkValidity());
+  }
+
+  // テンプレ選択は単価欄への自動入力のみ行う「補助」機能（選ばなくても自由入力で送信できる）
+  function handleTemplateSelect(e) {
+    const template = rateTemplates.find((t) => String(t.id) === e.target.value);
+    if (!template) return;
+    if (unitMinutesRef.current) unitMinutesRef.current.value = String(template.unitMinutes);
+    if (pricePerUnitRef.current) pricePerUnitRef.current.value = String(template.pricePerUnit);
+    if (formRef.current) setFormValid(formRef.current.checkValidity());
   }
 
   const canSubmit = formValid && selected.length > 0;
@@ -73,7 +85,7 @@ export default function WeekPicker({ monday, busy, action }) {
   }
 
   return (
-    <form action={action} className="card" onChange={handleFormChange} onInput={handleFormChange}>
+    <form ref={formRef} action={action} className="card" onChange={handleFormChange} onInput={handleFormChange}>
       <label>
         相談時間
         <select name="durationMinutes" required value={durationMinutes} onChange={handleDurationChange}>
@@ -148,10 +160,23 @@ export default function WeekPicker({ monday, busy, action }) {
         予定の名称（カレンダーに表示される予定名になります）
         <input type="text" name="title" required placeholder="例: 山田様 タイムチャージ相談" />
       </label>
+      {rateTemplates.length > 0 && (
+        <label>
+          よく使う単価から選ぶ（任意・単価欄に自動入力されます）
+          <select defaultValue="" onChange={handleTemplateSelect}>
+            <option value="">（自由入力）</option>
+            {rateTemplates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} — {t.unitMinutes}分あたり{t.pricePerUnit.toLocaleString()}円
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label>
         単価（◯分あたり◯円）
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <select name="unitMinutes" required defaultValue="15" style={{ width: "auto" }}>
+          <select name="unitMinutes" required defaultValue="15" ref={unitMinutesRef} style={{ width: "auto" }}>
             <option value="15">15分</option>
             <option value="30">30分</option>
             <option value="45">45分</option>
@@ -165,6 +190,7 @@ export default function WeekPicker({ monday, busy, action }) {
             min="0"
             step="1"
             defaultValue="3500"
+            ref={pricePerUnitRef}
             style={{ width: "auto", flex: 1 }}
           />
           <span>円（税別）</span>

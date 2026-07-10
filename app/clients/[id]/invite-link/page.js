@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getClient } from "@/lib/store";
-import { headers } from "next/headers";
+import { baseUrl } from "@/lib/baseUrl";
 
 export default async function InviteLinkPage({ params }) {
   const { id } = await params;
@@ -10,20 +10,17 @@ export default async function InviteLinkPage({ params }) {
     return (
       <main>
         <p>顧客が見つかりません。</p>
-        <Link href="/clients">戻る</Link>
+        <Link href="/">トップへ戻る</Link>
       </main>
     );
   }
 
-  const h = await headers();
-  const host = h.get("host");
-  const protocol = host?.startsWith("localhost") ? "http" : "https";
-  const url = `${protocol}://${host}/register/${client.inviteToken}`;
+  const url = `${await baseUrl()}/register/${client.inviteToken}`;
 
   return (
     <main>
       <div className="nav">
-        <Link href="/clients">顧客管理へ戻る</Link>
+        <Link href="/">トップへ戻る</Link>
       </div>
       <h1>招待リンク</h1>
       <p className="muted">

@@ -2,10 +2,15 @@ import Link from "next/link";
 import { getSession, getClients } from "@/lib/store";
 import { listRecentConferences, getConferenceForMeetingCode } from "@/lib/googleMeet";
 import { calcFee } from "@/lib/feeCalc";
+import { clientLabel as formatClientLabel } from "@/lib/clientLabel";
+import { formatJstDateTime, formatJstHM } from "@/lib/weekDates";
+import WithholdingConfirm from "./WithholdingConfirm";
 import {
   selectCandidateAction,
   manualCandidateAction,
   resetCandidateAction,
+  previewFinalizationAction,
+  backToDeductionAction,
   finalizeApprovalAction,
   retryChargeAction,
 } from "./actions";
@@ -23,7 +28,7 @@ export default async function ApprovePage({ params }) {
   const { id } = await params;
   const session = await getSession(id);
   const client = (await getClients()).find((c) => c.id === session?.clientId);
-  const clientLabel = client?.name || client?.email || "(不明)";
+  const clientLabel = formatClientLabel(client);
   const rate = session?.rate;
 
   if (!session) {
@@ -37,13 +42,20 @@ export default async function ApprovePage({ params }) {
 
   if (session.status === "approved") {
     const canRetry = session.paymentStatus === "no_card" || session.paymentStatus === "failed";
+    // 金額確定済みでも、実際に課金が完了しているとは限らないため見出しを状態に合わせる
+    const heading = canRetry ? "要確認" : session.paymentStatus === "paid" || session.paymentStatus === "no_charge" ? "決済済み" : "決済待ち";
     return (
       <main>
-        <h1>承認済み</h1>
+        <h1>{heading}</h1>
         <div className="card">
           <p>相談者: {clientLabel} 様</p>
           <p>請求対象時間: {session.billableMinutes}分（{session.fee.blocks}ブロック）</p>
           <p>合計: {session.fee.total.toLocaleString()}円（税別小計 {session.fee.subtotal.toLocaleString()}円 + 消費税 {session.fee.tax.toLocaleString()}円）</p>
+          {session.withholdingApplied && (
+            <p>
+              源泉徴収額: {session.withholdingAmount.toLocaleString()}円／実際の課金額: {(session.fee.total - session.withholdingAmount).toLocaleString()}円
+            </p>
+          )}
           <p>
             決済状況: {PAYMENT_STATUS_LABEL[session.paymentStatus] ?? session.paymentStatus ?? "不明"}
           </p>
@@ -52,7 +64,8 @@ export default async function ApprovePage({ params }) {
 
         {session.paymentStatus === "no_card" && (
           <p className="muted">
-            <Link href={`/clients/${client?.id}/card-setup`}>先にカードを登録</Link> してから、下のボタンで再課金できます。
+            <Link href={`/clients/${client?.id}/invite-link`}>招待リンク</Link>
+            から相談者ご本人にカードを登録していただいてから、下のボタンで再課金できます。
           </p>
         )}
 
@@ -70,13 +83,35 @@ export default async function ApprovePage({ params }) {
     );
   }
 
-  // ステップ2: 会議・参加者を選択済み → 控除入力して確定
+  // ステップ2b: 控除入力済み → 源泉徴収の有無を最終確認して確定・課金する
+  if (session.billableMinutes !== null) {
+    const suggestWithholding = !!client?.companyName;
+    return (
+      <main>
+        <h1>金額の確認・源泉徴収</h1>
+        <div className="card">
+          <p>相談者: {clientLabel} 様</p>
+          <p>請求対象時間: {session.billableMinutes}分（控除 {session.deductionMinutes}分）</p>
+        </div>
+
+        <WithholdingConfirm
+          sessionId={session.id}
+          fee={session.fee}
+          suggestWithholding={suggestWithholding}
+          action={finalizeApprovalAction}
+          backAction={backToDeductionAction}
+        />
+      </main>
+    );
+  }
+
+  // ステップ2a: 会議・参加者を選択済み → 控除を入力して試算する
   if (session.conferenceRecordName) {
     const previewMinutes = Math.max(0, (session.inRoomMinutes || 0) - (rate.freeMinutes || 0));
     const preview = calcFee(previewMinutes, rate);
     return (
       <main>
-        <h1>金額の確認</h1>
+        <h1>控除の入力</h1>
         <div className="card">
           <p>相談者: {clientLabel} 様</p>
           <p>
@@ -95,7 +130,7 @@ export default async function ApprovePage({ params }) {
           <p className="muted">この回は文字起こしが利用できなかったため、控除は手動で入力してください（初期値0分）。</p>
         )}
 
-        <form action={finalizeApprovalAction} className="card">
+        <form action={previewFinalizationAction} className="card">
           <input type="hidden" name="sessionId" value={session.id} />
           <label>
             控除（分）— 資料待ち等、明らかに相談と無関係な時間があれば入力
@@ -109,9 +144,9 @@ export default async function ApprovePage({ params }) {
           </label>
           <p className="muted">
             参考: 控除0分の場合 → {preview.blocks}ブロック / 合計 {preview.total.toLocaleString()}円
-            （控除を入力すると、確定時にその分を引いて再計算されます{rate.freeMinutes > 0 && `。最初の${rate.freeMinutes}分の無料分は既に引いた金額です`}）
+            （控除を入力すると、次の確認画面でその分を引いて再計算されます{rate.freeMinutes > 0 && `。最初の${rate.freeMinutes}分の無料分は既に引いた金額です`}）
           </p>
-          <button type="submit">この内容で確定する</button>
+          <button type="submit">次へ（確認画面へ）</button>
         </form>
 
         <form action={resetCandidateAction}>
@@ -143,7 +178,7 @@ export default async function ApprovePage({ params }) {
       <h1>対象の会議を選択</h1>
       <div className="card">
         <p>相談者: {clientLabel} 様</p>
-        <p className="muted">予定日時: {new Date(session.scheduledAt).toLocaleString("ja-JP")}</p>
+        <p className="muted">予定日時: {formatJstDateTime(session.scheduledAt)}</p>
       </div>
 
       {fetchError && (
@@ -160,8 +195,8 @@ export default async function ApprovePage({ params }) {
       {conferences.map((conf) => (
         <div className="card" key={conf.name}>
           <p className="muted">
-            会議 {new Date(conf.startTime).toLocaleString("ja-JP")} 〜{" "}
-            {conf.endTime ? new Date(conf.endTime).toLocaleTimeString("ja-JP") : "(進行中)"}
+            会議 {formatJstDateTime(conf.startTime)} 〜{" "}
+            {conf.endTime ? formatJstHM(conf.endTime) : "(進行中)"}
             （全体 {conf.durationMinutes ?? "?"}分）
           </p>
           {conf.participants.map((p, i) => (

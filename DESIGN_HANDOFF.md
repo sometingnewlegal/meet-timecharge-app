@@ -1,0 +1,141 @@
+# デザイン引き継ぎメモ
+
+別スレッドでデザイン作業を再開するときのための基本情報。コードの詳細は各ファイルを読めば分かるので、ここでは「なぜ今の形になっているか」を中心にまとめる。
+
+## このアプリの目的
+
+弁護士がGoogle Meetで行うオンライン法律相談のタイムチャージ課金を、日程調整→顧客登録→相談実施→時間集計→決済までワンストップでサポートするツール。**顧客管理（CRM）ではない**。この方針に沿って、顧客を直接登録する機能・弁護士代理でのカード登録機能は撤去済み。
+
+## 技術スタック
+
+- Next.js 16 (App Router / Server Components + Server Actions, Turbopack)
+- データ: ローカルは `data/db.json`、本番はNeon Postgres（1行にJSONを丸ごと保存、`lib/store.js`）
+- Google Calendar/Meet API（`lib/googleMeet.js`）— 空き状況表示、Meetリンク発行、参加者の在室時間取得
+- Stripe（`lib/stripe.js`）— カード登録（Checkout setupモード）、off_session課金
+- デプロイ: Vercel + Neon（無料枠）。テスト決済モード。
+
+## 画面構成
+
+- `/` — トップページ。相談を時系列フェーズで表示（後述）
+- `/rate-templates` — 単価テンプレート管理（登録は任意。`/start`での単価欄オートフィル用の補助機能で、必須化していない）
+- `/start` — 弁護士が日程候補（最大5件・Googleカレンダー風の週グリッドで選択）・単価・予定名を入力して送る画面
+- `/clients/[id]/invite-link` — 招待リンク確認画面（相談者に送るURLの表示のみ。顧客一覧ページ自体は撤去済み）
+- `/register/[token]` — 相談者側の単一リンク。候補選択→氏名等登録→カード登録の順で1本のリンクで完結
+- `/sessions`, `/sessions/[id]/approve` — 相談後の時間集計・決済確定フロー（会議選択→控除入力→源泉徴収確認→決済）
+
+## デザイン方針（このセッションで確定した決め事）
+
+1. **「承認」という言葉は全面禁止。** 実態はカード決済なので「決済待ち」「決済済み」で統一している。今後も approve/approval 的な文言を画面に出さないこと。
+2. **トップページは時系列フェーズ構成**（顧客管理タブは撤去済み）:
+   `予約の新規作成`（独立ボタン）→ `日程選択待ち` → `実施予定の相談` → `終了済みの相談`（`<details>`でデフォルト折りたたみ、中に`決済待ち`/`決済済み`）
+3. **フェーズごとに左ボーダー4pxで色分け**（`app/globals.css`の`.phase-card`系クラス、`--phase-waiting`(amber)/`--phase-review`(red)/`--phase-done`(green)、実施予定と新規作成は`--accent`系）。色は必ずlight/dark両方のCSS変数を定義すること。
+4. **「予約の新規作成」ボタンは他の相談カードと見た目を分離するが、装飾は最小限。** 標準ボタンサイズ（`padding: 10px 18px; font-size: 1rem;`）・赤（`#c0392b`）・下線なし・装飾記号（＋等）なし、というのが試行錯誤の末に落ち着いた形。「大きすぎる」「＋はいらない」というフィードバックがあった＝装飾を足しすぎない方向性。
+5. **各相談は`.card`＋左ボーダー色の「カードっぽい」見た目が好評。** 今後もこの見た目の言語（角丸カード、左ボーダーで状態を示す）を維持するとよい。
+6. 時刻表示は常に秒なし「00:00」形式（`lib/weekDates.js`の`formatJstHM`等）。日付は「上段=日付/下段=曜日」の二段表示（週グリッドで確立）。
+
+## Tailwind CSS / shadcn/ui 導入（2026-07-09）
+
+モダンなコンポーネントを使えるように、既存のプレーンCSS（`app/globals.css`の要素セレクタ方式）はそのまま残しつつ、Tailwind CSS v4 + shadcn/uiを追加導入した。
+
+- **導入コマンド**: `npx shadcn@latest init --defaults --yes --no-monorepo`（Tailwind v4を先に`npm install tailwindcss @tailwindcss/postcss postcss`しておく必要がある）。コンポーネント追加は `npx shadcn@latest add <component>`。
+- **style: "base-nova"**（`components.json`）。Radixではなく`@base-ui/react`（Base UI）がプリミティブ。JS運用（`tsx: false`、jsconfig.jsonのまま、`.jsx`で生成される）。
+- **配色トークンの統合**: shadcn initは`--background`/`--foreground`/`--border`/`--accent`を自分の既定値（oklchのグレースケール）で上書きしようとする。既存アプリのブランド色（青 `#1a56db`/ダーク`#5b8def`、フェーズ色）を守るため、以下の対応をした。
+  - `--primary`/`--primary-foreground`を新設し、旧`var(--accent)`を使っていた箇所（リンク色・button既定・button.secondary・週グリッドのヘッダー背景/hover/選択セル）は全部`var(--primary)`に置き換え済み。
+  - shadcn本来の`--accent`（ホバー面などに使う薄いニュートラル色）はshadcnの既定値のまま残している。**「アクセント＝ブランドブルー」という以前の呼び方はもう`--primary`側に移った**ので注意。
+  - `--phase-waiting`/`--phase-review`/`--phase-done`はそのまま維持。
+- **ダークモードの方式が違う**: shadcnは`.dark`クラス付与方式（`@custom-variant dark (&:is(.dark *));`）が既定だが、このアプリにテーマ切り替えボタンは無く`prefers-color-scheme`のみで自動切り替えする方針（既存の決め事）。そのため、shadcnが生成した`.dark { ... }`ブロックは削除し、既存の`@media (prefers-color-scheme: dark) { :root { ... } }`ブロックに統合してある。**今後shadcnのCLIで再度initやdiffを当てると`.dark`クラスブロックが復活する可能性があるので、その場合も同様にmedia query側へ手動統合すること。**
+- **カスケードの衝突に注意**: 旧来の要素セレクタ（`button`, `input, select`, `a`, `table`等、`app/globals.css`）はTailwindの`@layer utilities`より強い「レイヤー無し」ルールだったため、shadcnの`<Button>`（Tailwindユーティリティで見た目を作る）を完全に上書きしてしまっていた。対策として、
+  1. 旧来ルール一式を`@layer base { ... }`で包み、Tailwindの`utilities`レイヤーより優先度を下げた。
+  2. それでも`ghost`/`link`のように背景色ユーティリティを持たないvariantは影響を受けるため、`button`要素セレクタ自体を`button:not([data-slot="button"])`に絞り込み、shadcnの`<Button>`（`data-slot="button"`を持つ）を除外した。
+  - **今後、shadcnの`<Input>`や`<Select>`等を追加するときも同じ問題が起きる**（`input, select { ... }`ルールが同様に強く効く）。追加時は同じ要領で`:not([data-slot="..."])`を足すか、該当コンポーネントを使うページでは旧CSSの対象から外すことを検討する。
+- **Turbopackの既知の癖**（下記「注意点」にも書いてあるやつ）が`globals.css`編集後にも出た。CSS的には正しいのに`Unclosed block`等のエラーが出たら、dev serverの再起動で直ることが多い（実際、postcss単体でパースすると通ることを確認済み）。
+
+## カラー・見た目のリニューアル（2026-07-09）
+
+クリーム＋セージグリーンの「今っぽい優しい」トーンに変更した。
+
+- **配色**: 背景 `#F0F3EE`（クリーム）/ 文字 `#222B20`（ダークグリーン）/ ブランド色（`--primary`）`#7A9870`（セージグリーン）。ダークモードは背景`#222B20`・文字`#F0F3EE`とほぼ反転させ、`--primary`はダーク側で少し明るめの`#8AAB80`に調整（コントラスト確保のため）。`--primary-foreground`はライト/ダークとも濃緑系（`#222B20`/`#1A2118`）— セージグリーンは彩度・明度的に白文字だとコントラストが弱く、濃色文字の方が読みやすいと判断したため。
+- **`--border`は`color-mix(in srgb, var(--foreground) 14%, var(--background))`という相対式に変更**。ハードコードの灰色をやめ、背景・文字色が変わっても自動で馴染む枠線になる。
+- **カードは枠線→シャドウ表現に変更**。`--card`（ライト`#ffffff`/ダーク`#2B362A`、背景よりわずかに明るい面）と`--shadow-card`（ライト/ダークそれぞれ用に濃さの違う2層box-shadow）を新設し、`.card`は`border:none`+`box-shadow: var(--shadow-card)`+`border-radius:16px`に。左ボーダー4pxでフェーズ色分けする`.phase-card`の見た目はそのまま維持。
+- **ボタンはピル型（`border-radius:999px`）に統一**。自前の`button`ルールと`.new-session-button`、shadcnの`components/ui/button.jsx`（全variant・全sizeの角丸を`rounded-full`に変更）両方に適用。
+  - **`.week-cell`（週グリッドの各セル、実体は`<button>`）はこのピル化から除外している**（`button:not([data-slot="button"]):not(.week-cell)`）。一度ここを外し忘れて週グリッド全体が緑色のピルの塊に見える事故があったので、今後`button`要素セレクタ側を触るときは`.week-cell`除外を忘れないこと。
+- **余白を全体的に拡大**（body padding 24→36px、.card padding 16→22-24px、h2の上マージン1.5rem→2rem、label/nav/週グリッドのmargin-bottomも増量）。
+- **フォントに太さを追加**（body基本を`font-weight:500`、h1/h2を`700`、ボタン類を`600`）。
+- **背景に薄いグラデーションを追加**（`--page-gradient`、`body`に`background-image`として適用。`--background`自体は他の要素（input等）が単色前提で参照しているので変更していない）。飛行機予約アプリのモックアップ画像を参考に、セージ寄りの薄緑→クリーム→ごく薄いピーチへ斜めに流れる配色にした。
+
+## デザイン判断の大原則（ユーザーからの明確な指示・2026-07-09）
+
+**常に利用者（弁護士本人）の立場から考えてデザインを判断すること。** このアプリの機能と利用場面（いつ・何のためにその画面を見るのか）を踏まえずに見た目だけで判断しない。文字の視認性も同じ視点で必ず確認する。これを怠った初歩的ミスへの指摘が実際にあった。
+
+- 文言は業務の実態に合わせる。例:「決済へ進む」は誤り。弁護士がやるのは**時間集計と金額確定**で、課金はその結果として登録済みカードに自動実行される。ボタンは「時間集計・金額確定へ」とし、補足説明を添えた。（「承認」禁止・「決済待ち/決済済み」統一のルールは従来どおり）
+- トップページの情報階層: 実施予定は「日付(7/15(水))を主役、その下に時刻範囲(14:00~15:00)」。所要時間(60分)は終了時刻から分かるので書かない。単価は小さく添える。決済待ちは日時より**概算金額**を主役にする。
+- 主役の文字サイズは相手の名前(1.02rem)より一段大きい程度(1.2rem)に抑える。大きすぎるとバランスが崩れると指摘があった。
+- フェーズ（日程選択待ち/実施予定/終了済み）はそれぞれ`.phase-section`で包み、**上辺の罫線でグループの境目を明示**する。カード自体は`.card-group`（1グループ=1枚の角丸カード、中の行は罫線区切り、行全体が詳細ページへのリンク、右端にシェブロン）。
+- 各相談は`/sessions/[id]`の詳細ページ（日時・単価・概算金額・連絡先・カード登録状況をラベル+値の`.detail-row`で表示、Meetリンクあり）に遷移する。フロー全体のイメージは「iPhoneヘルスケアアプリのようにシンプルにカードが並ぶ」構成。
+
+## 弁護士側ページの簡易パスワードゲート（2026-07-09）
+
+**このアプリには元々どのページにも認証が無く、URLさえ分かれば誰でも依頼者の氏名・メール・金額データを見られる状態だった。** 請求リマインドメールの検討中にこの点が問題になり、対応した。
+
+- `proxy.js`（Next.js 16では`middleware.js`は非推奨。`export function proxy(request)`という名前でエクスポートする必要がある点に注意）で、`/register`（依頼者向け招待リンク。`inviteToken`のみで守る従来設計）以外の全パスをゲートする。
+- 認証は共有パスワード1つのみ（`APP_PASSWORD`環境変数）。ログインすると`app_auth`という名前のhttpOnly Cookieに**パスワードの値そのもの**を30日間保存し、`proxy.js`側で単純比較する（ユーザーアカウントや複雑なセッション管理はまだ作っていない。「有料化するならメール+PWにするが、今はそこまでしない」というユーザー判断）。
+- `APP_PASSWORD`が未設定の場合はフェイルセーフとして全ページを500エラーでブロックする（保護なしで公開されるより安全なため）。**本番（Vercel）にもこの環境変数を必ず設定すること。**`.env.example`に説明あり。ローカルの`.env.local`には開発用のランダム値を設定済み。
+- ログイン画面は`/login`（`app/login/page.js`・`app/login/actions.js`）。
+
+## 決済フェーズの4区分（2026-07-09）
+
+「決済待ち」が実態として2つの違う状態を指してしまっていた反省から、`app/page.js`のトップページを以下の4区分に整理した。スキーマ変更はしていない（`status`と`paymentStatus`の組み合わせだけで判定）。
+
+| 表示名 | 条件 | 畳むか | 弁護士の対応 |
+|---|---|---|---|
+| 未請求 | `status:scheduled` かつ実施時刻を過ぎた | 常に表示 | 時間集計・金額確定がまだ |
+| 要確認 | `status:approved` かつ`paymentStatus`が`no_card`/`failed` | 常に表示 | 依頼者にカード登録・確認を依頼する必要（弁護士だけでは解決しないことが多いので「要再課金」ではなくこの名前にした） |
+| 決済待ち | `status:approved` かつ`paymentStatus`が`processing`/`requires_action` | 「終了済みの相談を表示」で畳む | 弁護士側にできることは無い、結果待ち |
+| 決済済み | `status:approved` かつ`paymentStatus`が`paid`/`no_charge` | 同上 | 完了 |
+
+- 未請求・要確認は「まだ弁護士のアクションが要る」ので`<details>`の外（常時表示）、決済待ち・決済済みは対応不要なので従来通り折りたたみ内。
+- 要確認・決済待ちのカードは`/sessions/[id]/approve`に直接遷移する（既存の「approved」分岐がそのまま使える。再課金ボタンは`no_card`/`failed`のときだけ表示）。未請求・実施予定は`/sessions/[id]`（軽量な詳細ページ）に遷移し、そこから「時間集計・金額確定へ」で本フローに入る。
+- `approve/page.js`の「approved」分岐は見出しを状態に応じて「要確認」/「決済待ち」/「決済済み」に出し分けるよう変更済み（以前は`paymentStatus`によらず常に「決済済み」表示だったのを修正）。
+- **`no_card`（カード未登録）は正規のフローでは実質発生し得ない異常系。** `register/[token]/page.js`が`defaultPaymentMethodId`の無い相談者にはMeetリンクを一切見せない設計になっているため、相談が実際に行われた（＝金額確定できた）時点でカードは必ず登録済みのはず。要確認で現実的に起こるのはほぼ`failed`（課金失敗）のみ。テストデータや説明で`no_card`を「よくあるケース」のように扱わないこと（過去に指摘あり）。
+
+**まだ未着手（議論のみ）:** 会議終了・料金算定準備完了を検知してリマインドメールを送る仕組み（Gmail API + Vercel Cron、`gmail.send`スコープ追加が必要）。
+
+## カードの色分け・未請求の格上げ表示（2026-07-09）
+
+- **カード（グループ）自体にフェーズの色をのせた。** `.card-group`に`tint-waiting`/`tint-upcoming`/`tint-info`の修飾クラスを付け、`color-mix(in srgb, フェーズ色 ~22-26%, var(--card))`で塗りを作る。グループ内は全行が同じフェーズなので、行単位ではなくグループ単位で色分けしている。**最初10-14%で作ったら「背景が薄いのでカードはもっと濃くていい、実施予定は背景とほぼ同じで視認性が落ちている」と指摘され、22-26%まで上げた。** 背景（クリーム系グラデーション）とカードは常に見分けがつく濃さにすること。実施予定の色は`--link`（文字用に暗めにした緑）ではなく`--primary`（元の彩度のセージグリーン）に変更した — 文字用に調整した色を背景の塗りに使うと薄すぎることがある。
+- **文字色はフェーズに合わせず黒系（`--card-foreground`）に統一。** 一度「主役の文字（金額・日付・氏名）もフェーズ色に揃える」実装をしたが、「背景と同系色の文字は視認性が落ちる」「特に人名に色を付けるべきではない」という強い指摘があり撤回した。**背景の色分けと、文字の色分けは別物として扱うこと。文字は常に読みやすさ優先、人名には状態色を付けない。**
+- **要確認は赤(`phase-review`)だと未請求と紛らわしいため、青系の`--info`トークンを新設して`tint-info`/`phase-info`に変更した。**
+- **未請求バナーは「濃い赤の塗りつぶし＋白文字」から「控えめなピンク寄りの塗り＋黒系文字＋左に赤いビックリマークアイコン」に変更した。** 「カードの色が濃すぎる、ピンクに近くする。その代わり左に赤いビックリマークアイコンを配置する」という指摘に対応（`--urgent-icon-bg`を新設。アイコンは`.urgent-icon`、見出し行は`.urgent-heading`）。`unbilled.length > 0`のときだけ`<h1>`直後に表示され、0件なら完全に消える。
+- **未請求・要確認のカードから単価表示を削除した**（金額そのものが主役として出ているので、単価の内訳は不要と判断）。実施予定・決済待ち（真の意味）のカードには残してある。
+- **「予約の新規作成」ボタンを白い角丸パネルで囲む案は試したが「全然ダメ」と却下され、元の単体ピルボタンに戻した。** 同じ見た目の変更を繰り返し提案しないこと。
+- 使われなくなった`--phase-review`/`--phase-done`/`.phase-card`系の旧クラスは削除済み（`card-group`方式に統一されたため）。
+
+## 設定メニューの新設（2026-07-09）
+
+トップページの`.nav`にあった「単価テンプレート」への直リンクを廃止し、代わりに**画面左上に固定されたハンバーガーボタン**（`app/SettingsMenu.js`、lucide-reactの`Menu`/`X`）にした。
+
+- **専用ページ（`/settings`）ではなく、`app/layout.js`に組み込んだクライアントコンポーネントのオーバーレイパネル**にした。最初`/settings`という別ページで作ったが「ハンバーガーの位置がおかしい」「これはアコーディオンなのか、押したら設定項目が開いてほしい（参考画像のように）」と指摘され、画面左上固定のボタン＋オーバーレイ方式に作り直した。ボタンの位置がずれるとやり直しになるので、次に似た要望が来たら最初からこの形（固定ボタン＋overlay）で作ること。
+- `.settings-trigger`は`position: fixed; top/left: 20px`で常にどのページでも同じ場所にある。押すと`.settings-overlay`（半透明の黒背景）＋`.settings-panel`（画面左から被さる白いパネル）が開く。パネルの外側かXボタンで閉じる。
+- パネルの中身はカテゴリごとのアコーディオン（ネイティブ`<details>/<summary>`、CSSクラスは`.settings-accordion`/`.settings-group`/`.settings-group-body`/`.settings-item`）。現状は「単価」カテゴリ1つだけで、展開すると`/rate-templates`（単価テンプレート管理。中身は変更なし）への「テンプレート登録」リンクが出る。**今後増える設定項目はこの`settings-accordion`の中に`<details className="settings-group">`を追加していく。**
+- **依頼者向けページ（`/register/*`）とログイン画面（`/login`）にはこのボタンを出さない**（`SettingsMenu.js`内で`usePathname()`を見て早期returnしている）。弁護士専用の機能を依頼者に見せないため。
+- `body`の上パディングを36px→92pxに増やし、固定ボタンとページタイトルが重ならないようにしてある。新しく固定要素を画面に追加するときはこの余白と衝突しないか確認すること。
+
+## 注意点・既知の癖
+
+- **テーマはCSSの`prefers-color-scheme`で自動切り替え。** 新しい色は必ず`:root`と`@media (prefers-color-scheme: dark)`の両方に定義する（`app/globals.css`参照）。
+- **ローカル開発は実際のGoogleカレンダー・アカウントに接続されている。** 予約フローをUIで最後まで通すと本物のカレンダーに予定が作成される。確認だけしたい場合は`data/db.json`を直接編集してテストする方が安全（このセッションでも毎回そうしていた）。
+- Turbopackは関数のリネーム/追加直後に古いモジュールグラフのエラーを出すことがある（コード自体は正しいのに"export doesn't exist"等）。dev serverの再起動（stop→start）で解消する。
+- 時刻は必ずJST変換ヘルパー（`lib/weekDates.js`の`formatJstHM`/`formatJstDateTime`/`formatJstDate`）を使うこと。サーバーはUTCで動くため、`new Date().toLocaleString("ja-JP")`のような書き方は本番で9時間ズレる（このセッションで実際にあったバグ）。
+
+## データモデルの要点
+
+- **Client**: `{id, name, companyName, email, status, inviteToken, stripeCustomerId, defaultPaymentMethodId, pendingRequest}`。`pendingRequest`があれば「日程選択待ち」。
+- **Session**: `{id, clientId, title, rate, scheduledAt, status(scheduled|approved), meetingCode/meetingUri/calendarEventId, conferenceRecordName, billableMinutes, fee, withholdingApplied, withholdingAmount, paymentStatus}`。`rate`は`{unitMinutes, pricePerUnit, taxRate, freeMinutes}`をセッションごとに埋め込み（テンプレートへの外部キー参照はしない、denormalized設計）。
+- **RateTemplate**: `{id, name, unitMinutes, pricePerUnit}`。あくまでオートフィル用のプリセットで、選択後は単なる初期値。
+
+## 共通ヘルパー（重複させずにここを使う）
+
+- `lib/clientLabel.js` — 顧客の表示名（氏名>メール>不明の優先順位）
+- `lib/baseUrl.js` — このアプリ自身の公開URL組み立て
+- `lib/weekDates.js` — JST日時のフォーマット・週の計算
+- `lib/feeCalc.js` — 料金計算（タクシーメーター方式）・源泉徴収額計算

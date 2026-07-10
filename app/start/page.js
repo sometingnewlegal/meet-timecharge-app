@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getBusyEvents } from "@/lib/googleMeet";
+import { getRateTemplates } from "@/lib/store";
 import { todayJstDateStr, mondayOf, addDays } from "@/lib/weekDates";
 import { createScheduleRequestAction } from "./actions";
 import WeekPicker from "./WeekPicker";
@@ -12,6 +13,8 @@ export default async function StartPage({ searchParams }) {
   const friday = addDays(monday, 4);
   const prevWeekHref = `/start?week=${addDays(monday, -7)}`;
   const nextWeekHref = `/start?week=${addDays(monday, 7)}`;
+
+  const rateTemplates = await getRateTemplates();
 
   let busy = [];
   let fetchError = null;
@@ -48,6 +51,7 @@ export default async function StartPage({ searchParams }) {
       <WeekPicker
         monday={monday}
         busy={busy}
+        rateTemplates={rateTemplates}
         action={createScheduleRequestAction}
       />
     </main>
