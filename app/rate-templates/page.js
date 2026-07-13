@@ -1,4 +1,4 @@
-import Link from "next/link";
+import HomeLink from "@/components/HomeLink";
 import { getRateTemplates } from "@/lib/store";
 import { addRateTemplateAction, deleteRateTemplateAction } from "./actions";
 
@@ -9,9 +9,7 @@ export default async function RateTemplatesPage() {
 
   return (
     <main>
-      <div className="nav">
-        <Link href="/">トップ</Link>
-      </div>
+      <HomeLink />
       <h1>単価テンプレート</h1>
       <p className="muted">
         よく使う単価をテンプレとして登録しておくと、相談日程の候補送信画面（/start）で選ぶだけで単価欄に自動入力されます。

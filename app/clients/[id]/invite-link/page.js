@@ -1,4 +1,4 @@
-import Link from "next/link";
+import HomeLink from "@/components/HomeLink";
 import { getClient } from "@/lib/store";
 import { baseUrl } from "@/lib/baseUrl";
 
@@ -9,8 +9,8 @@ export default async function InviteLinkPage({ params }) {
   if (!client) {
     return (
       <main>
+        <HomeLink />
         <p>顧客が見つかりません。</p>
-        <Link href="/">トップへ戻る</Link>
       </main>
     );
   }
@@ -19,9 +19,7 @@ export default async function InviteLinkPage({ params }) {
 
   return (
     <main>
-      <div className="nav">
-        <Link href="/">トップへ戻る</Link>
-      </div>
+      <HomeLink />
       <h1>招待リンク</h1>
       <p className="muted">
         このリンクをメールやチャットで相談者ご本人に送ってください。

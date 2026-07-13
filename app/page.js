@@ -80,7 +80,7 @@ export default async function Home() {
       <div className="page-header">
         <h1>タイムチャージ相談アプリ</h1>
         <Link href="/start" className="new-session-button">
-          予約の新規作成
+          新規作成
         </Link>
       </div>
 
@@ -96,17 +96,10 @@ export default async function Home() {
               const when = `${sessionDateLabel(s.scheduledAt)} ${sessionTimeRange(s)}実施`;
               return (
                 <Link href={`/sessions/${s.id}`} className="card-group-item" key={s.id}>
-                  {estimate ? (
-                    <div className="session-highlight">
-                      <span className="session-highlight-value">{estimate.total.toLocaleString()}円</span>
-                      <span className="session-highlight-time">概算</span>
-                    </div>
-                  ) : (
-                    <div className="session-highlight">
-                      <span className="session-highlight-value">{sessionDateLabel(s.scheduledAt)}</span>
-                      <span className="session-highlight-time">{sessionTimeRange(s)}</span>
-                    </div>
-                  )}
+                  <div className="session-highlight">
+                    <span className="session-highlight-value">{estimate.total.toLocaleString()}円</span>
+                    <span className="session-highlight-time">概算</span>
+                  </div>
                   <div className="session-details">
                     <div className="session-client">{clientLabel(clientById(s.clientId))} 様</div>
                     <p className="muted session-meta">{when}</p>
@@ -126,6 +119,9 @@ export default async function Home() {
           <div className="card-group">
             {waitingForDate.map((c) => (
               <Link href={`/clients/${c.id}/invite-link`} className="card-group-item phase-waiting" key={c.id}>
+                <div className="session-highlight">
+                  <span className="session-highlight-value is-placeholder">未定</span>
+                </div>
                 <div className="session-details">
                   <div className="session-client">{clientLabel(c)} 様</div>
                   <p className="muted session-meta">

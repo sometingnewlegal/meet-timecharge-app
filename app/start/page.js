@@ -1,4 +1,4 @@
-import Link from "next/link";
+import HomeLink from "@/components/HomeLink";
 import { getBusyEvents } from "@/lib/googleMeet";
 import { getRateTemplates } from "@/lib/store";
 import { todayJstDateStr, mondayOf, addDays } from "@/lib/weekDates";
@@ -26,16 +26,8 @@ export default async function StartPage({ searchParams }) {
 
   return (
     <main>
-      <div className="nav">
-        <Link href="/">トップ</Link>
-      </div>
-      <h1>相談日程の候補を送る</h1>
-      <p className="muted">
-        相談者の氏名やカード情報が無くても送れます（初回相談を想定）。
-        ご自身のGoogleカレンダーの空き状況を見ながら、候補日時を最大5個まで選んで送れます。
-        相談者はリンク上でその中から都合の良い日時を選び、決まるとMeetの予定が自動発行されます。
-        続けて氏名・カード登録に進んでもらう流れです。
-      </p>
+      <HomeLink />
+      <h1>新規作成</h1>
 
       {fetchError && (
         <p className="muted">
@@ -43,16 +35,13 @@ export default async function StartPage({ searchParams }) {
         </p>
       )}
 
-      <div className="nav">
-        <Link href={prevWeekHref}>← 前の週</Link>
-        <Link href={nextWeekHref}>次の週 →</Link>
-      </div>
-
       <WeekPicker
         monday={monday}
         busy={busy}
         rateTemplates={rateTemplates}
         action={createScheduleRequestAction}
+        prevWeekHref={prevWeekHref}
+        nextWeekHref={nextWeekHref}
       />
     </main>
   );

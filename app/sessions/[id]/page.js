@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HomeLink from "@/components/HomeLink";
 import { getSession, getClients } from "@/lib/store";
 import { clientLabel } from "@/lib/clientLabel";
 import { formatJstEndHM, formatJstHM, toJstParts } from "@/lib/weekDates";
@@ -22,8 +23,8 @@ export default async function SessionDetailPage({ params }) {
   if (!session) {
     return (
       <main>
+        <HomeLink />
         <p>相談記録が見つかりません。</p>
-        <Link href="/">トップへ戻る</Link>
       </main>
     );
   }
@@ -40,9 +41,7 @@ export default async function SessionDetailPage({ params }) {
 
   return (
     <main>
-      <div className="nav">
-        <Link href="/">トップ</Link>
-      </div>
+      <HomeLink />
       <h1>{clientLabel(client)} 様</h1>
 
       <div className="card">

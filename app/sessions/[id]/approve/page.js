@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HomeLink from "@/components/HomeLink";
 import { getSession, getClients } from "@/lib/store";
 import { listRecentConferences, getConferenceForMeetingCode } from "@/lib/googleMeet";
 import { calcFee } from "@/lib/feeCalc";
@@ -12,7 +13,6 @@ import {
   previewFinalizationAction,
   backToDeductionAction,
   finalizeApprovalAction,
-  retryChargeAction,
 } from "./actions";
 
 const PAYMENT_STATUS_LABEL = {
@@ -34,8 +34,8 @@ export default async function ApprovePage({ params }) {
   if (!session) {
     return (
       <main>
+        <HomeLink />
         <p>相談記録が見つかりません。</p>
-        <Link href="/">トップへ戻る</Link>
       </main>
     );
   }
@@ -65,15 +65,8 @@ export default async function ApprovePage({ params }) {
         {session.paymentStatus === "no_card" && (
           <p className="muted">
             <Link href={`/clients/${client?.id}/invite-link`}>招待リンク</Link>
-            から相談者ご本人にカードを登録していただいてから、下のボタンで再課金できます。
+            から相談者ご本人にカードを登録していただいてください。
           </p>
-        )}
-
-        {canRetry && (
-          <form action={retryChargeAction}>
-            <input type="hidden" name="sessionId" value={session.id} />
-            <button type="submit">再課金を試す</button>
-          </form>
         )}
 
         <p className="muted">

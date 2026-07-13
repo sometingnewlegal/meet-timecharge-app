@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HomeLink from "@/components/HomeLink";
 import { getSessions, getClients } from "@/lib/store";
 import { clientLabel } from "@/lib/clientLabel";
 import { formatJstDateTime } from "@/lib/weekDates";
@@ -12,9 +13,7 @@ export default async function SessionsPage() {
 
   return (
     <main>
-      <div className="nav">
-        <Link href="/">トップ</Link>
-      </div>
+      <HomeLink />
       <h1>相談一覧</h1>
       {sessions.length === 0 && <p className="muted">まだ相談記録がありません。</p>}
       {sessions.map((s) => (

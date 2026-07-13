@@ -35,13 +35,18 @@
     radial-gradient(at 92% 6%, color-mix(in srgb, var(--accent-purple) 18%, transparent) 0px, transparent 55%),
     radial-gradient(at 6% 92%, color-mix(in srgb, var(--accent-mint) 24%, transparent) 0px, transparent 55%),
     radial-gradient(at 94% 94%, color-mix(in srgb, var(--accent-lilac) 20%, transparent) 0px, transparent 55%);
-  --cta-bg: #1F2A1C;
-  --cta-bg-hover: #12190F;
-  --cta-foreground: #F5F1E8;
+  /* CTA（新規作成）: 背景のライラック系ブロブと同系統のディープベリー。
+     ガラスやセージグリーンの他要素とは異質な「濃い単色の塗り」で起点ボタンとわかるようにする */
+  --cta-bg: #7A2F5C;
+  --cta-bg-hover: #632548;
+  --cta-foreground: #FAF0F5;
   /* 未請求バナーのビックリマークアイコン用。ライト/ダーク共通の固定色 */
   --urgent-icon-bg: #E4392B;
   /* 要確認カード用の青系トーン */
   --info: #2F6FB0;
+  /* 新規作成画面: Googleカレンダー風の既存予定の帯 */
+  --event-band: #5B7FA6;
+  --event-band-text: #fff;
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --secondary: oklch(0.97 0 0);
@@ -93,10 +98,13 @@
       radial-gradient(at 6% 92%, color-mix(in srgb, var(--accent-mint) 26%, transparent) 0px, transparent 55%),
       radial-gradient(at 94% 94%, color-mix(in srgb, var(--accent-lilac) 26%, transparent) 0px, transparent 55%),
       linear-gradient(135deg, #1A1625 0%, #201A2E 50%, #14121F 100%);
-    --cta-bg: #F0F3EE;
-    --cta-bg-hover: #DDE4D3;
-    --cta-foreground: #222B20;
+    /* ダークでは背景に沈まないよう、ひと回り明るいベリーに */
+    --cta-bg: #9C4477;
+    --cta-bg-hover: #AC5587;
+    --cta-foreground: #FBEFF6;
     --info: #6FA8DC;
+    --event-band: #7A9BC2;
+    --event-band-text: #14121F;
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.269 0 0);
@@ -192,11 +200,14 @@ h2 {
   text-decoration: none;
   background: var(--cta-bg);
   color: var(--cta-foreground);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   font-weight: 600;
+  letter-spacing: 0.06em;
   border-radius: 999px;
-  padding: 12px 24px;
-  font-size: 1rem;
+  padding: 13px 28px;
+  font-size: 0.98rem;
   margin-bottom: 28px;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--cta-bg) 30%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 .new-session-button:hover {
   background: var(--cta-bg-hover);
@@ -225,9 +236,8 @@ h2 {
 }
 .card-group-item {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 18px 20px;
+  align-items: stretch;
+  padding: 0;
   border-radius: 16px;
   border: 1px solid var(--glass-border);
   border-left: 4px solid transparent;
@@ -237,6 +247,7 @@ h2 {
   text-decoration: none;
   color: inherit;
   margin-bottom: 12px;
+  overflow: hidden;
 }
 .card-group-item:last-child {
   margin-bottom: 0;
@@ -249,7 +260,8 @@ h2 {
 .card-group-item.phase-info { border-left-color: var(--info); }
 .card-group-chevron {
   flex: 0 0 auto;
-  margin-left: auto;
+  align-self: center;
+  margin: 0 18px 0 4px;
   opacity: 0.35;
 }
 
@@ -279,33 +291,49 @@ h2 {
   line-height: 1;
 }
 
-/* 相談カード内の情報階層。左に「今いちばん大事な数字」(日付・金額)、右に詳細。 */
+/* 相談カード内の情報階層。左＝キー情報エリア（全カード共通の固定幅・縦中央揃え）、
+   薄い縦線を挟んで右＝詳細エリア。左は「今いちばん大事な数字」(日付・金額)だけを置く。 */
 .session-highlight {
   flex: 0 0 auto;
-  min-width: 96px;
+  width: 108px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px 8px;
+  border-right: 1.5px solid color-mix(in srgb, var(--foreground) 22%, transparent);
 }
-/* 主役情報（日付・金額）。相手の名前(1.02rem)より一段大きい程度に抑え、バランスを保つ */
+/* 主役情報（日付・金額）と、それを補足する2番目の情報（時刻・「概算」など）。
+   日時カードでは日付・時間のどちらも実務上重要なため、文字サイズの差をあえて小さくしてある */
 .session-highlight-value {
   display: block;
-  font-size: 1.2rem;
+  font-size: 1.12rem;
   font-weight: 800;
-  line-height: 1.2;
+  line-height: 1.25;
   white-space: nowrap;
 }
-/* 主役を補足する2番目の情報（時刻範囲・「概算」など）。グレーだと消えて見えた反省から、
-   薄いグレーではなく本文色＋太さで階層をつける */
 .session-highlight-time {
   display: block;
   margin-top: 2px;
-  font-size: 0.92rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--foreground);
-  opacity: 0.8;
+  opacity: 0.85;
   white-space: nowrap;
+}
+.session-highlight-value.is-placeholder {
+  font-size: 0.98rem;
+  font-weight: 700;
+  opacity: 0.55;
 }
 .session-details {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 16px 18px 16px 20px;
 }
 .session-client {
   font-size: 1.02rem;
@@ -390,6 +418,31 @@ button.secondary {
   gap: 20px;
   margin-bottom: 28px;
   font-size: 0.9rem;
+}
+
+/* トップへ戻る。緑の小さなテキストリンクでは見落とされがちだったため、
+   家アイコン＋本文色のガラスピルにして視認性を上げる */
+.home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--card);
+  /* 白のガラス縁だと背景に溶けて輪郭が見えないため、本文色系の濃い縁にする */
+  border: 1.5px solid color-mix(in srgb, var(--foreground) 28%, transparent);
+  border-radius: 999px;
+  padding: 8px 16px 8px 12px;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(20px);
+}
+.home-link:hover {
+  background: color-mix(in srgb, var(--foreground) 8%, var(--card));
+}
+.home-link svg {
+  flex: 0 0 auto;
 }
 
 /* 設定（ハンバーガー）ボタン。画面左上に固定し、どのページからでも開ける */
@@ -480,10 +533,28 @@ td, th {
   font-size: 0.9rem;
 }
 
+/* 週送りナビ。カレンダーグリッドの直上に接する一体型のバー */
+.week-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  font-size: 0.9rem;
+}
+.week-nav a {
+  text-decoration: none;
+  font-weight: 600;
+}
+
 .week-grid {
   display: grid;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  /* 上辺は.week-navと接続するので角丸なし */
+  border-radius: 0 0 12px 12px;
   overflow: hidden;
   margin-bottom: 18px;
 }
@@ -498,18 +569,32 @@ td, th {
   border-left: 1px solid var(--border);
 }
 
+/* 時刻ラベル列と曜日列。曜日列は既存予定の帯(.week-event-band)を絶対配置で重ねる土台になる */
+.week-time-col {
+  display: flex;
+  flex-direction: column;
+}
+.week-day-col {
+  position: relative;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
 .week-time-label {
   font-size: 0.72rem;
   color: #888;
   text-align: right;
   padding: 0 6px;
   white-space: nowrap;
+  /* .week-cellと同じ高さにして行を揃える（帯の位置計算はWeekPicker.jsのCELL_HEIGHTと連動） */
+  height: 26px;
 }
 
 .week-cell {
-  border-left: 1px solid var(--border);
+  border: none;
   border-top: 1px solid var(--border);
-  min-height: 22px;
+  height: 26px;
   cursor: pointer;
   background: transparent;
   color: var(--foreground);
@@ -520,20 +605,17 @@ td, th {
   padding: 0 2px;
 }
 
-.week-cell:hover {
+.week-cell:hover:not(:disabled) {
   background: color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
-.week-cell.busy {
-  background: var(--border);
-  color: var(--foreground);
+.week-cell:disabled {
   cursor: not-allowed;
 }
 
 .week-cell.past {
   background: color-mix(in srgb, var(--foreground) 6%, transparent);
   color: var(--foreground);
-  cursor: not-allowed;
 }
 
 .week-cell.selected {
@@ -541,10 +623,33 @@ td, th {
   color: var(--primary-foreground);
   font-weight: bold;
   text-align: center;
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   line-height: 1.2;
   white-space: normal;
   word-break: keep-all;
+}
+
+/* 既存予定の帯。Googleカレンダーのように、予定の長さぶんを1つの塊で表示する */
+.week-event-band {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  background: var(--event-band);
+  color: var(--event-band-text);
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.3;
+  padding: 3px 5px;
+  overflow: hidden;
+  z-index: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+.week-event-time {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 500;
+  opacity: 0.85;
 }
 
 }

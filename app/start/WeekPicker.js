@@ -1,11 +1,13 @@
 "use client";
-import { Fragment, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { addDays } from "@/lib/weekDates";
 
 const MAX_CANDIDATES = 5;
 const START_HOUR = 9;
 const END_HOUR = 19; // この時刻以降には新しい枠を作らない
 const DAY_LABELS = ["月", "火", "水", "木", "金"];
+const CELL_HEIGHT = 26; // 1枠の高さ(px)。既存予定の帯の位置計算にも使うのでCSSの.week-cellと揃えること
 
 function buildSlots(stepMinutes) {
   const slots = [];
@@ -27,7 +29,7 @@ function formatHM(hour, minute) {
   return `${pad2(hour)}:${pad2(minute)}`;
 }
 
-export default function WeekPicker({ monday, busy, rateTemplates = [], action }) {
+export default function WeekPicker({ monday, busy, rateTemplates = [], action, prevWeekHref, nextWeekHref }) {
   const [durationMinutes, setDurationMinutes] = useState(30);
   const [selected, setSelected] = useState([]); // ISO文字列の配列（選んだ順）
   const [formValid, setFormValid] = useState(false); // 候補以外の必須項目が揃っているか
@@ -71,6 +73,30 @@ export default function WeekPicker({ monday, busy, rateTemplates = [], action })
     return busyRanges.find((b) => start < b.end && end > b.start) || null;
   }
 
+  // 既存予定をGoogleカレンダー風の「1つの帯」として表示するための位置計算。
+  // グリッドの表示範囲(9:00〜19:00)にかかる部分だけを、その日の列内のpx位置に変換する
+  function bandsForDay(dateStr) {
+    const dayStart = new Date(`${dateStr}T00:00:00+09:00`).getTime();
+    const gridStartMin = START_HOUR * 60;
+    const gridEndMin = END_HOUR * 60;
+    const pxPerMin = CELL_HEIGHT / durationMinutes;
+    const bands = [];
+    for (const b of busyRanges) {
+      const rawStartMin = (b.start - dayStart) / 60000;
+      const rawEndMin = (b.end - dayStart) / 60000;
+      if (rawEndMin <= gridStartMin || rawStartMin >= gridEndMin) continue;
+      const startMin = Math.max(rawStartMin, gridStartMin);
+      const endMin = Math.min(rawEndMin, gridEndMin);
+      bands.push({
+        top: (startMin - gridStartMin) * pxPerMin,
+        height: (endMin - startMin) * pxPerMin,
+        summary: b.summary,
+        timeLabel: `${formatHM(Math.floor(startMin / 60), Math.round(startMin % 60))}~${formatHM(Math.floor(endMin / 60) % 24, Math.round(endMin % 60))}`,
+      });
+    }
+    return bands;
+  }
+
   function toggle(iso) {
     setSelected((prev) => {
       if (prev.includes(iso)) return prev.filter((v) => v !== iso);
@@ -99,9 +125,13 @@ export default function WeekPicker({ monday, busy, rateTemplates = [], action })
       </label>
 
       <p className="muted">
-        空いている枠をクリックして候補にしてください（最大{MAX_CANDIDATES}個）。網掛けは既存の予定がある時間帯で、予定名も表示しています。
+        空いている枠をクリックして候補にしてください（最大{MAX_CANDIDATES}個）。
       </p>
 
+      <div className="week-nav">
+        <Link href={prevWeekHref}>← 前の週</Link>
+        <Link href={nextWeekHref}>次の週 →</Link>
+      </div>
       <div
         className="week-grid"
         style={{ gridTemplateColumns: `44px repeat(${days.length}, 1fr)` }}
@@ -117,24 +147,26 @@ export default function WeekPicker({ monday, busy, rateTemplates = [], action })
           );
         })}
 
-        {slots.map(({ hour, minute }) => (
-          <Fragment key={`row-${hour}-${minute}`}>
-            <div className="week-time-label">
+        <div className="week-time-col">
+          {slots.map(({ hour, minute }) => (
+            <div className="week-time-label" key={`t-${hour}-${minute}`}>
               {formatHM(hour, minute)}
             </div>
-            {days.map((dateStr) => {
+          ))}
+        </div>
+        {days.map((dateStr) => (
+          <div className="week-day-col" key={dateStr}>
+            {slots.map(({ hour, minute }) => {
               const iso = isoOf(dateStr, hour, minute);
               const past = new Date(iso).getTime() < now;
               const busyEvent = !past ? findBusyEvent(iso) : null;
               const idx = selected.indexOf(iso);
               const disabled = past || !!busyEvent;
               const classes = ["week-cell"];
-              if (busyEvent) classes.push("busy");
               if (past) classes.push("past");
               if (idx !== -1) classes.push("selected");
               const endTotal = hour * 60 + minute + durationMinutes;
               const rangeLabel = `${formatHM(hour, minute)}~${formatHM(Math.floor(endTotal / 60) % 24, endTotal % 60)}`;
-              const content = idx !== -1 ? rangeLabel : busyEvent ? busyEvent.summary : "";
               return (
                 <button
                   type="button"
@@ -144,11 +176,22 @@ export default function WeekPicker({ monday, busy, rateTemplates = [], action })
                   onClick={() => toggle(iso)}
                   title={busyEvent ? `${rangeLabel} ${busyEvent.summary}` : rangeLabel}
                 >
-                  {content}
+                  {idx !== -1 ? rangeLabel : ""}
                 </button>
               );
             })}
-          </Fragment>
+            {bandsForDay(dateStr).map((band, i) => (
+              <div
+                className="week-event-band"
+                key={`band-${i}`}
+                style={{ top: band.top + 2, height: Math.max(band.height - 4, 8) }}
+                title={`${band.timeLabel} ${band.summary}`}
+              >
+                {band.summary}
+                <span className="week-event-time">{band.timeLabel}</span>
+              </div>
+            ))}
+          </div>
         ))}
       </div>
 
